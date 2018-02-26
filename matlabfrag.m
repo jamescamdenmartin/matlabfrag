@@ -635,268 +635,295 @@ end
     Plot2D = isempty(get(handle,'zticklabel')) && all( get(handle,'view') == [0 90] );
     % Loop through all axes
     for jj = ['x' 'y' 'z']
-      ticklabels = get(handle,[jj,'ticklabel']);
-      ticks = get(handle,[jj,'tick']);
-      lims = get(handle,[jj,'lim']);
-      % If there are no ticks, skip to the next axis
-      if isempty(ticks)
-        continue;
-      end
-      % Trim the ticks (if they lay outside lims)
-      if AutoTickLabel.(jj)
-        ticks = ticks( ticks >= lims(1) );
-        ticks = ticks( ticks <= lims(2) );
-        SetUnsetProperties('Trimming tick labels',handle,[jj,'tick'],ticks);
-      end
-      set(handle,[jj,'tickmode'],'manual',[jj,'ticklabelmode'],'manual');
-      if ~isempty(ticklabels)
-        tickcolour = get(handle,[jj,'color']);
-        
-        % Test to see if it is on a logarithmic scale
-        if strcmpi(get(handle,[jj,'scale']),'log') && AutoTickLabel.(jj)
-          ticklabelcell = mat2cell(ticklabels,ones(1,size(ticklabels,1)),size(ticklabels,2));
-          if strcmpi( p.Results.unaryminus, 'short' )
-            ticklabels = cellfun(@(x) ['\mathmodel',...
-              regexprep( RemoveSpaces(x), '-', ['\\',NEGTICK_SHORT_SCRIPT_COMMAND,' '] ),...
-              '\mathmoder'],ticklabelcell,'uniformoutput',0);
-          else
-            ticklabels = cellfun(@(x) ['\mathmodel',RemoveSpaces(x),...
-              '\mathmoder'],ticklabelcell,'uniformoutput',0);
-          end
-          
-          % Test to see if there is a common factor
-        elseif strcmpi(get(handle,[jj,'scale']),'linear') && AutoTickLabel.(jj)
-          for kk=1:size(ticklabels,1)
-            % Find the first non-NaN ratio between tick labels and tick
-            % values
-            scale = ticks(kk)/str2double(ticklabels(kk,:));
-            if ~isnan(scale); break; end;
-          end
-          
-          % If the scale is not 1, then we need to place a marker near the
-          % axis
-          if abs(scale-1) > 1e-3
-            scale = log10(scale);
-            % Make sure it is an integer.
-            assert( abs(scale-round(scale))<1e-2, 'matlabfrag:AxesScaling:NonInteger',...
-              ['Non integer axes scaling.  This is most likely a bug in matlabfrag.\n',...
-              'Please let me know the ytick and yticklabel values for this plot.']);
-            if strcmpi( p.Results.unaryminus, 'short' )
-              LatexScale = ['\mathmodel\times10^{', regexprep( num2str(round(scale)), '-', ['\\',NEGTICK_SHORT_SCRIPT_COMMAND,' '] ), '}\mathmoder'];
-            else
-              LatexScale = ['\mathmodel\times10^{',num2str(round(scale)),'}\mathmoder'];
-            end
-            % Different action depending if the plot is 2D or 3D
-            if Plot2D
-              %2D Plot... fairly easy.
-              % Common required data...
-              Xlims = get(handle,'xlim');
-              Ylims = get(handle,'ylim');
-              Xdir = get(handle,'xdir');
-              Ydir = get(handle,'ydir');
-              XAlignment = get(handle,'XAxisLocation');
-              YAlignment = get(handle,'YAxisLocation');
-              % 2D plot, so only x and y...
-              CurrentReplacement = ReplacementString();
-              
-              % If the axes are reversed, reverse the lims
-              if strcmpi(Xdir,'reverse')
-                Xlims = Xlims(end:-1:1);
-              end
-              if strcmpi(Ydir,'reverse')
-                Ylims = Ylims(end:-1:1);
-              end
-                          
-              % X axis scale
-              if strcmpi(jj,'x')
-                if strcmpi(XAlignment,'bottom');
-                  ht = text(Xlims(2),Ylims(1),CurrentReplacement,...
-                    'fontsize',FontSize,'fontname',FontName,...
-                    'HorizontalAlignment','center','VerticalAlignment','top',...
-                    'parent',handle,'interpreter','none');
-                  extent = get(ht,'extent');
-                  position = get(ht,'position');
-                  set(ht,'position',[position(1) position(2)-1.0*extent(4) position(3)]);
-                  Alignment = 'tc';
-                else
-                  ht = text(Xlims(2),Ylims(2),CurrentReplacement,...
-                    'fontsize',FontSize,'fontname',FontName,...
-                    'HorizontalAlignment','center','VerticalAlignment','bottom',...
-                    'parent',handle,'interpreter','none');
-                  extent = get(ht,'extent');
-                  position = get(ht,'position');
-                  set(ht,'position',[position(1) position(2)+1.0*extent(4) position(3)]);
-                  Alignment = 'bc';
-                end
-                
-                % Y axis scale
-              else
-                if strcmpi(XAlignment,'bottom')
-                  if strcmpi(YAlignment,'left')
-                    ht = text(Xlims(1),Ylims(2),CurrentReplacement,...
-                      'fontsize',FontSize,'fontname',FontName,...
-                      'HorizontalAlignment','center','VerticalAlignment','bottom',...
-                      'parent',handle,'interpreter','none');
-                  else
-                    ht = text(Xlims(2),Ylims(2),CurrentReplacement,...
-                      'fontsize',FontSize,'fontname',FontName,...
-                      'HorizontalAlignment','center','VerticalAlignment','bottom',...
-                      'parent',handle,'interpreter','none');
-                  end
-                  extent = get(ht,'extent');
-                  position = get(ht,'position');
-                  set(ht,'position',[position(1) position(2)+0.5*extent(4) position(3)]);
-                  Alignment = 'bc';
-                else
-                  if strcmpi(YAlignment,'left')
-                    ht = text(Xlims(1),Ylims(1),CurrentReplacement,...
-                      'fontsize',FontSize,'fontname',FontName,...
-                      'HorizontalAlignment','center','VerticalAlignment','top',...
-                      'parent',handle,'interpreter','none');
-                  else
-                    ht = text(Xlims(2),Ylims(1),CurrentReplacement,...
-                      'fontsize',FontSize,'fontname',FontName,...
-                      'HorizontalAlignment','center','VerticalAlignment','top',...
-                      'parent',handle,'interpreter','none');
-                  end
-                  extent = get(ht,'extent');
-                  position = get(ht,'position');
-                  set(ht,'position',[position(1) position(2)-0.5*extent(4) position(3)]);
-                  Alignment = 'tc';
-                end
-              end
-              
-              % Create the replacement command
-              AddPsfragCommand(LatexScale,CurrentReplacement,Alignment,FontSize,...
-                tickcolour,FontAngle,FontWeight,FixedWidth,[jj,'scale']);
-              % Delete the label
-              AddUndoAction('Delete axis scale', @() delete(ht) );
-            else
-              % Why is this so hard?
-              warning('matlabfrag:scaled3Daxis',...
-                ['It looks like your %s axis is scaled on a 3D plot. Unfortunately\n',...
-                'these are very hard to handle, so there may be a problem with\n',...
-                'its placement. If you know of a better algorithm for placing it,\n',...
-                'please let me know by creating an issue at www.github.com/zprime/matlabfrag',...
-                ],jj);
-              % :-(
-              CurrentReplacement = ReplacementString();
-              Xlim = get(handle,'xlim');
-              Ylim = get(handle,'ylim');
-              Zlim = get(handle,'zlim');
-              axlen = @(x) x(2)-x(1);
-              switch lower( jj )
-                case 'x'
-                  ht = text(Xlim(1)+0.6*axlen(Xlim),...
-                    Ylim(1)-0.3*axlen(Ylim),...
-                    Zlim(1),...
-                    CurrentReplacement,'fontsize',FontSize,...
-                    'fontname',FontName,'parent',handle,'interpreter','none');
-                  Alignment = 'bl';
-                case 'y'
-                  ht = text(Xlim(1)-0.3*axlen(Xlim),...
-                    Ylim(1)+0.6*axlen(Ylim),...
-                    Zlim(1),...
-                    CurrentReplacement,'fontsize',FontSize,...
-                    'fontname',FontName,'horizontalalignment',...
-                    'right','parent',handle,'interpreter','none');
-                  Alignment = 'br';
-                case 'z'
-                  ht = text(Xlim(1),Ylim(2),Zlim(2)+0.2*axlen(Zlim),...
-                    CurrentReplacement,'fontsize',FontSize,...
-                    'fontname',FontName,'horizontalalignment',...
-                    'right','parent',handle,'interpreter','none');
-                  Alignment = 'br';
-                otherwise
-                  error('matlabfrag:wtf',['Bad axis; this error shouldn''t happen.\n',...
-                    'please report it as a bug.']);
-              end
-              % Create the replacement command
-              AddPsfragCommand(LatexScale,CurrentReplacement,Alignment,FontSize,...
-                tickcolour,FontAngle,FontWeight,FixedWidth,[jj,'scale']);
-              % Delete the label
-              AddUndoAction('DeleteAxesScale', @() delete(ht) );
-            end
-          end
-        end
-        
-        % Test whether all of the ticks are numbers, if so, substitute in
-        % proper minus signs.
-        if ~iscell(ticklabels)
-          ticklabels = mat2cell(ticklabels,ones(1,size(ticklabels,1)),size(ticklabels,2));
-        end
-        TicksAreNumbers = 1;
-        for kk=1:size(ticklabels,1)
-          if isempty(ticklabels{kk,:})
+      axishandle = get(handle,[jj,'axis']); % Handle figures with more than one y or x axes
+      for qq=1:length(axishandle)
+          ticklabels = get(axishandle(qq),'ticklabel');
+          ticks = get(axishandle(qq),'tickvalues');
+          lims = get(axishandle(qq),'lim');
+          % If there are no ticks, skip to the next axis
+          if isempty(ticks)
             continue;
           end
-          if isnan(str2double(ticklabels{kk,:}))
-            TicksAreNumbers = 0;
-            break;
+          % Trim the ticks (if they lay outside lims)
+          if AutoTickLabel.(jj)
+            ticks = ticks( ticks >= lims(1) );
+            ticks = ticks( ticks <= lims(2) );
+            SetUnsetProperties('Trimming tick labels',axishandle(qq),['tickvalues'],ticks);
           end
-        end
-        if TicksAreNumbers
-          if (Plot2D && strcmpi(jj,'x')) || (~Plot2D && any(strcmpi(jj,{'x','y'})) )
-            for kk=1:size(ticklabels)
-              if isempty(ticklabels{kk,:})
-                continue;
-              end
-              ticklabels{kk,:} = ['\mathmodel',...
-              RemoveSpaces( regexprep(ticklabels{kk,:},'-',['\\',NEGTICK_NO_WIDTH_COMMAND,' ']) ),...
-              '\mathmoder'];
-            end
-          else
-            for kk=1:size(ticklabels)
-              if isempty(ticklabels{kk,:})
-                continue;
-              end
+          set(axishandle(qq),['TickValuesMode'],'manual',['ticklabelsmode'],'manual');
+          if ~isempty(ticklabels)
+            tickcolour = get(axishandle(qq),['color']);
+
+            % Test to see if it is on a logarithmic scale
+            if strcmpi(get(axishandle(qq),['scale']),'log') && AutoTickLabel.(jj)
+              ticklabelcell = mat2cell(ticklabels,ones(1,size(ticklabels,1)),size(ticklabels,2));
               if strcmpi( p.Results.unaryminus, 'short' )
-                ticklabels{kk,:} = ['\mathmodel',...
-                  RemoveSpaces( regexprep(ticklabels{kk,:},'-',['\\',NEGTICK_SHORT_COMMAND,' ']) ),...
-                  '\mathmoder'];
+                ticklabels = cellfun(@(x) ['\mathmodel',...
+                  regexprep( RemoveSpaces(x), '-', ['\\',NEGTICK_SHORT_SCRIPT_COMMAND,' '] ),...
+                  '\mathmoder'],ticklabelcell,'uniformoutput',0);
               else
-                ticklabels{kk,:} = ['\mathmodel', RemoveSpaces( ticklabels{kk,:} ),'\mathmoder'];
+                ticklabels = cellfun(@(x) ['\mathmodel',RemoveSpaces(x),...
+                  '\mathmoder'],ticklabelcell,'uniformoutput',0);
+              end
+
+              % Test to see if there is a common factor
+            elseif strcmpi(get(axishandle(qq),['scale']),'linear') && AutoTickLabel.(jj)
+              for kk=1:size(ticklabels,1)
+                % Find the first non-NaN ratio between tick labels and tick
+                % values
+                scale = ticks(kk)/str2double(ticklabels(kk,:));
+                if ~isnan(scale); break; end;
+              end
+
+              % If the scale is not 1, then we need to place a marker near the
+              % axis
+              if abs(scale-1) > 1e-3
+                scale = log10(scale);
+                % Make sure it is an integer.
+                assert( abs(scale-round(scale))<1e-2, 'matlabfrag:AxesScaling:NonInteger',...
+                  ['Non integer axes scaling.  This is most likely a bug in matlabfrag.\n',...
+                  'Please let me know the ytick and yticklabel values for this plot.']);
+                if strcmpi( p.Results.unaryminus, 'short' )
+                  LatexScale = ['\mathmodel\times10^{', regexprep( num2str(round(scale)), '-', ['\\',NEGTICK_SHORT_SCRIPT_COMMAND,' '] ), '}\mathmoder'];
+                else
+                  LatexScale = ['\mathmodel\times10^{',num2str(round(scale)),'}\mathmoder'];
+                end
+                % Different action depending if the plot is 2D or 3D
+                if Plot2D
+                  %2D Plot... fairly easy.
+                  % Common required data...
+                  Xlims = get(axishandle(qq),'xlim');
+                  Ylims = get(axishandle(qq),'ylim');
+                  Xdir = get(axishandle(qq),'xdir');
+                  Ydir = get(axishandle(qq),'ydir');
+                  XAlignment = get(axishandle(qq),'XAxisLocation');
+                  YAlignment = get(axishandle(qq),'YAxisLocation');
+                  % 2D plot, so only x and y...
+                  CurrentReplacement = ReplacementString();
+
+                  % If the axes are reversed, reverse the lims
+                  if strcmpi(Xdir,'reverse')
+                    Xlims = Xlims(end:-1:1);
+                  end
+                  if strcmpi(Ydir,'reverse')
+                    Ylims = Ylims(end:-1:1);
+                  end
+
+                  % X axis scale
+                  if strcmpi(jj,'x')
+                    if strcmpi(XAlignment,'bottom');
+                      ht = text(Xlims(2),Ylims(1),CurrentReplacement,...
+                        'fontsize',FontSize,'fontname',FontName,...
+                        'HorizontalAlignment','center','VerticalAlignment','top',...
+                        'parent',handle,'interpreter','none');
+                      extent = get(ht,'extent');
+                      position = get(ht,'position');
+                      set(ht,'position',[position(1) position(2)-1.0*extent(4) position(3)]);
+                      Alignment = 'tc';
+                    else
+                      ht = text(Xlims(2),Ylims(2),CurrentReplacement,...
+                        'fontsize',FontSize,'fontname',FontName,...
+                        'HorizontalAlignment','center','VerticalAlignment','bottom',...
+                        'parent',axishandle(qq),'interpreter','none');
+                      extent = get(ht,'extent');
+                      position = get(ht,'position');
+                      set(ht,'position',[position(1) position(2)+1.0*extent(4) position(3)]);
+                      Alignment = 'bc';
+                    end
+
+                    % Y axis scale
+                  else
+                    if strcmpi(XAlignment,'bottom')
+                      if strcmpi(YAlignment,'left')
+                        ht = text(Xlims(1),Ylims(2),CurrentReplacement,...
+                          'fontsize',FontSize,'fontname',FontName,...
+                          'HorizontalAlignment','center','VerticalAlignment','bottom',...
+                          'parent',axishandle(qq),'interpreter','none');
+                      else
+                        ht = text(Xlims(2),Ylims(2),CurrentReplacement,...
+                          'fontsize',FontSize,'fontname',FontName,...
+                          'HorizontalAlignment','center','VerticalAlignment','bottom',...
+                          'parent',axishandle(qq),'interpreter','none');
+                      end
+                      extent = get(ht,'extent');
+                      position = get(ht,'position');
+                      set(ht,'position',[position(1) position(2)+0.5*extent(4) position(3)]);
+                      Alignment = 'bc';
+                    else
+                      if strcmpi(YAlignment,'left')
+                        ht = text(Xlims(1),Ylims(1),CurrentReplacement,...
+                          'fontsize',FontSize,'fontname',FontName,...
+                          'HorizontalAlignment','center','VerticalAlignment','top',...
+                          'parent',axishandle(qq),'interpreter','none');
+                      else
+                        ht = text(Xlims(2),Ylims(1),CurrentReplacement,...
+                          'fontsize',FontSize,'fontname',FontName,...
+                          'HorizontalAlignment','center','VerticalAlignment','top',...
+                          'parent',axishandle(qq),'interpreter','none');
+                      end
+                      extent = get(ht,'extent');
+                      position = get(ht,'position');
+                      set(ht,'position',[position(1) position(2)-0.5*extent(4) position(3)]);
+                      Alignment = 'tc';
+                    end
+                  end
+
+                  % Create the replacement command
+                  AddPsfragCommand(LatexScale,CurrentReplacement,Alignment,FontSize,...
+                    tickcolour,FontAngle,FontWeight,FixedWidth,['scale']);
+                  % Delete the label
+                  AddUndoAction('Delete axis scale', @() delete(ht) );
+                else
+                  % Why is this so hard?
+                  warning('matlabfrag:scaled3Daxis',...
+                    ['It looks like your %s axis is scaled on a 3D plot. Unfortunately\n',...
+                    'these are very hard to handle, so there may be a problem with\n',...
+                    'its placement. If you know of a better algorithm for placing it,\n',...
+                    'please let me know by creating an issue at www.github.com/zprime/matlabfrag',...
+                    ],jj);
+                  % :-(
+                  CurrentReplacement = ReplacementString();
+                  Xlim = get(axishandle(qq),'xlim');
+                  Ylim = get(axishandle(qq),'ylim');
+                  Zlim = get(axishandle(qq),'zlim');
+                  axlen = @(x) x(2)-x(1);
+                  switch lower( jj )
+                    case 'x'
+                      ht = text(Xlim(1)+0.6*axlen(Xlim),...
+                        Ylim(1)-0.3*axlen(Ylim),...
+                        Zlim(1),...
+                        CurrentReplacement,'fontsize',FontSize,...
+                        'fontname',FontName,'parent',axishandle(qq),'interpreter','none');
+                      Alignment = 'bl';
+                    case 'y'
+                      ht = text(Xlim(1)-0.3*axlen(Xlim),...
+                        Ylim(1)+0.6*axlen(Ylim),...
+                        Zlim(1),...
+                        CurrentReplacement,'fontsize',FontSize,...
+                        'fontname',FontName,'horizontalalignment',...
+                        'right','parent',axishandle(qq),'interpreter','none');
+                      Alignment = 'br';
+                    case 'z'
+                      ht = text(Xlim(1),Ylim(2),Zlim(2)+0.2*axlen(Zlim),...
+                        CurrentReplacement,'fontsize',FontSize,...
+                        'fontname',FontName,'horizontalalignment',...
+                        'right','parent',axishandle(qq),'interpreter','none');
+                      Alignment = 'br';
+                    otherwise
+                      error('matlabfrag:wtf',['Bad axis; this error shouldn''t happen.\n',...
+                        'please report it as a bug.']);
+                  end
+                  % Create the replacement command
+                  AddPsfragCommand(LatexScale,CurrentReplacement,Alignment,FontSize,...
+                    tickcolour,FontAngle,FontWeight,FixedWidth,['scale']);
+                  % Delete the label
+                  AddUndoAction('DeleteAxesScale', @() delete(ht) );
+                end
               end
             end
-          end
-        end
-        clear TicksAreNumbers
-        
-        tickreplacements = cell(1,size(ticklabels,1));
-        % Process the X and Y tick alignment
-        if ~strcmpi(jj,'z')
-          switch get(handle,[jj,'axislocation'])
-            case 'left'
-              tickalignment = 'rc';
-            case 'right'
-              tickalignment = 'lc';
-            case 'bottom'
-              tickalignment = 'ct';
-            case 'top'
-              tickalignment = 'cb';
-            otherwise
+
+            % Test whether all of the ticks are numbers, if so, substitute in
+            % proper minus signs.
+            if ~iscell(ticklabels)
+              ticklabels = mat2cell(ticklabels,ones(1,size(ticklabels,1)),size(ticklabels,2));
+            end
+            TicksAreNumbers = 1;
+            for kk=1:size(ticklabels,1)
+              if isempty(ticklabels{kk,:})
+                continue;
+              end
+              if isnan(str2double(ticklabels{kk,:}))
+                TicksAreNumbers = 0;
+                break;
+              end
+            end
+            if TicksAreNumbers
+              if (Plot2D && strcmpi(jj,'x')) || (~Plot2D && any(strcmpi(jj,{'x','y'})) )
+                for kk=1:size(ticklabels)
+                  if isempty(ticklabels{kk,:})
+                    continue;
+                  end
+                  ticklabels{kk,:} = ['\mathmodel',...
+                  RemoveSpaces( regexprep(ticklabels{kk,:},'-',['\\',NEGTICK_NO_WIDTH_COMMAND,' ']) ),...
+                  '\mathmoder'];
+                end
+              else
+                for kk=1:size(ticklabels)
+                  if isempty(ticklabels{kk,:})
+                    continue;
+                  end
+                  if strcmpi( p.Results.unaryminus, 'short' )
+                    ticklabels{kk,:} = ['\mathmodel',...
+                      RemoveSpaces( regexprep(ticklabels{kk,:},'-',['\\',NEGTICK_SHORT_COMMAND,' ']) ),...
+                      '\mathmoder'];
+                  else
+                    ticklabels{kk,:} = ['\mathmodel', RemoveSpaces( ticklabels{kk,:} ),'\mathmoder'];
+                  end
+                end
+              end
+            end
+            clear TicksAreNumbers
+
+            tickreplacements = cell(1,size(ticklabels,1));
+            % Process the X and Y tick alignment
+            if ~strcmpi(jj,'z')
+              if(length(axishandle) > 1 &&  qq == 1) 
+                  % Hack to handle more than one of  the same axis
+                  % MATLAB doesn't actually store the location of more than one
+                  % so we can handle cases of up to two axis by taking the last
+                  % axis's location and assuming that the other is in the
+                  % opposite direction
+                  switch get(axishandle(qq).Parent,[jj,'axislocation'])
+                    case 'right'
+                      tickalignment = 'rc'; % Last axis is on the right, 
+                                            % so align this one as if it
+                                            % were on the left
+                    case 'left'
+                      tickalignment = 'lc';
+                    case 'top'
+                      tickalignment = 'ct';
+                    case 'bottom'
+                      tickalignment = 'cb';
+                    otherwise
+                      tickalignment = 'cr';
+                      warning('matlabfrag:UnknownAxisLocation',...
+                        'Unknown axis location defaulting to ''cr'''); 
+                  end
+              else
+                  switch get(axishandle(qq).Parent,[jj,'axislocation'])
+                    case 'left'
+                      tickalignment = 'rc';
+                    case 'right'
+                      tickalignment = 'lc';
+                    case 'bottom'
+                      tickalignment = 'ct';
+                    case 'top'
+                      tickalignment = 'cb';
+                    otherwise
+                      tickalignment = 'cr';
+                      warning('matlabfrag:UnknownAxisLocation',...
+                        'Unknown axis location defaulting to ''cr''');
+                  end
+              end
+            else
+            % Fixed Z tick alignment
               tickalignment = 'cr';
-              warning('matlabfrag:UnknownAxisLocation',...
-                'Unknown axis location defaulting to ''cr''');
+            end
+
+            % Now process the actual tick labels themselves...
+            for kk=1:size(ticklabels,1)
+              if isempty( ticklabels{kk,:} )
+                tickreplacements{kk} = '';
+                continue;
+              end
+              tickreplacements{kk} = ReplacementString();
+              AddPsfragCommand(ticklabels{kk,:},tickreplacements{kk},...
+                tickalignment,FontSize,tickcolour,FontAngle,FontWeight,...
+                FixedWidth,['tick']);
+            end
+            % Now add the replacement action...
+            SetUnsetProperties('Tick replacement',axishandle(qq),['ticklabel'],tickreplacements);
           end
-        else
-        % Fixed Z tick alignment
-          tickalignment = 'cr';
-        end
-        
-        % Now process the actual tick labels themselves...
-        for kk=1:size(ticklabels,1)
-          if isempty( ticklabels{kk,:} )
-            tickreplacements{kk} = '';
-            continue;
-          end
-          tickreplacements{kk} = ReplacementString();
-          AddPsfragCommand(ticklabels{kk,:},tickreplacements{kk},...
-            tickalignment,FontSize,tickcolour,FontAngle,FontWeight,...
-            FixedWidth,[jj,'tick']);
-        end
-        % Now add the replacement action...
-        SetUnsetProperties('Tick replacement',handle,[jj,'ticklabel'],tickreplacements);
       end
     end
   end    % of ProcessTicks
